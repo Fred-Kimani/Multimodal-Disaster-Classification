@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+.pytest_cache/
+venv/
+.venv/
+env/
+
+# Project Data
+data/
+data/raw/
+data/processed/
+
+# Model Checkpoints (avoid pushing large binary weights)
+models/checkpoints/
+
+# IDE / System
+.DS_Store
+.vscode/
+.idea/
+
+# React Native / Expo
+mobile-dashboard/node_modules/
+mobile-dashboard/.expo/
+mobile-dashboard/web-build/
+mobile-dashboard/dist/
+mobile-dashboard/npm-debug.log*
+mobile-dashboard/yarn-debug.log*
+mobile-dashboard/yarn-error.log*
+mobile-dashboard/.env.local
+mobile-dashboard/.env.development.local
+mobile-dashboard/.env.test.local
+mobile-dashboard/.env.production.local
