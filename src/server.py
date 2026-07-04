@@ -205,7 +205,9 @@ def get_random_test_sample():
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
             
         ext = os.path.splitext(img_rel_path)[1].lower().replace(".", "")
-        mime = f"image/{ext}" if ext in ["png", "jpg", "jpeg", "webp"] else "image/jpeg"
+        if ext == "jpg":
+            ext = "jpeg"
+        mime = f"image/{ext}" if ext in ["png", "jpeg", "webp"] else "image/jpeg"
         data_uri = f"data:{mime};base64,{encoded_string}"
         
         return {
