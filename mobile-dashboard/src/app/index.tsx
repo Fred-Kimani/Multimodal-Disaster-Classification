@@ -97,16 +97,21 @@ export default function HomeScreen() {
       const data = await response.json();
       setTweet(data.tweet);
       setImageUri(data.image_data_uri);
+      
+      // Immediately run prediction on the newly fetched data
+      await analyzePost(data.tweet, data.image_data_uri);
     } catch (error) {
       alert(`Failed to fetch test sample: ${error.message}`);
-    } finally {
       setLoading(false);
     }
   };
 
   // Inference Execution
-  const analyzePost = async () => {
-    if (!imageUri) {
+  const analyzePost = async (overrideTweet = null, overrideImageUri = null) => {
+    const activeTweet = overrideTweet !== null ? overrideTweet : tweet;
+    const activeImageUri = overrideImageUri !== null ? overrideImageUri : imageUri;
+
+    if (!activeImageUri) {
       alert("Please select or upload a disaster image.");
       return;
     }
@@ -115,38 +120,38 @@ export default function HomeScreen() {
     setPredictions(null);
 
     const formData = new FormData();
-    formData.append('tweet', tweet);
+    formData.append('tweet', activeTweet);
 
     // Format file payload for cross-platform upload
     if (Platform.OS === 'web') {
       try {
-        const response = await fetch(imageUri);
+        const response = await fetch(activeImageUri);
         const blob = await response.blob();
-        const filename = imageUri.startsWith('data:') ? 'sample_preset.svg' : 'upload.jpg';
+        const filename = activeImageUri.startsWith('data:') ? 'sample_preset.svg' : 'upload.jpg';
         formData.append('image', blob, filename);
       } catch (err) {
         console.error("Web blob packaging failed: ", err);
         // Fallback to RN URI object
         formData.append('image', {
-          uri: imageUri,
-          type: imageUri.startsWith('data:') ? 'image/svg+xml' : 'image/jpeg',
+          uri: activeImageUri,
+          type: activeImageUri.startsWith('data:') ? 'image/svg+xml' : 'image/jpeg',
           name: 'photo.jpg'
         } as any);
       }
     } else {
-      if (imageUri.startsWith('data:')) {
+      if (activeImageUri.startsWith('data:')) {
         const filename = 'sample_preset.svg';
         formData.append('image', {
-          uri: imageUri,
+          uri: activeImageUri,
           type: 'image/svg+xml',
           name: filename
         } as any);
       } else {
-        const filename = imageUri.split('/').pop() || 'photo.jpg';
+        const filename = activeImageUri.split('/').pop() || 'photo.jpg';
         const match = /\.(\w+)$/.exec(filename);
         const type = match ? `image/${match[1]}` : `image/jpeg`;
         formData.append('image', {
-          uri: imageUri,
+          uri: activeImageUri,
           type: type,
           name: filename
         } as any);
