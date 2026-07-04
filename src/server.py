@@ -9,6 +9,9 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+import pandas as pd
+import base64
+import random
 from src.data.preprocessing import clean_tweet, get_image_transforms
 from src.models.classifier import MultimodalClassifier
 
@@ -173,6 +176,46 @@ async def predict(
         }
         
     return results
+
+@app.get("/random-test-sample")
+def get_random_test_sample():
+    if configs is None:
+        init_resources()
+        
+    tsv_path = configs["data"]["test_tsv"]
+    images_dir = configs["data"]["raw_dir"]
+    
+    if not os.path.exists(tsv_path):
+        raise HTTPException(status_code=404, detail=f"Test TSV file not found at {tsv_path}")
+        
+    try:
+        df = pd.read_csv(tsv_path, sep="\t")
+        df = df.dropna(subset=["image", "tweet_text"])
+        
+        # Select random row
+        row = df.sample(n=1).iloc[0]
+        
+        img_rel_path = row["image"]
+        img_abs_path = os.path.join(images_dir, img_rel_path)
+        
+        if not os.path.exists(img_abs_path):
+            raise FileNotFoundError(f"Image not found at {img_abs_path}")
+            
+        with open(img_abs_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+            
+        ext = os.path.splitext(img_rel_path)[1].lower().replace(".", "")
+        mime = f"image/{ext}" if ext in ["png", "jpg", "jpeg", "webp"] else "image/jpeg"
+        data_uri = f"data:{mime};base64,{encoded_string}"
+        
+        return {
+            "tweet": str(row["tweet_text"]),
+            "image_data_uri": data_uri,
+            "event_name": str(row.get("event_name", "Unknown")),
+            "damage_severity": str(row.get("label", "Unknown"))
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch test sample: {str(e)}")
 
 # Initialize components on startup if model checkpoints exist
 @app.on_event("startup")

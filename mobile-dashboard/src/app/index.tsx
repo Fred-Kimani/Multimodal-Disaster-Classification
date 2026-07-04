@@ -85,6 +85,25 @@ export default function HomeScreen() {
     setPredictions(null);
   };
 
+  // Shuffle Test Sample from Dataset
+  const shuffleTestSample = async () => {
+    setLoading(true);
+    setPredictions(null);
+    try {
+      const response = await fetch(`${serverIp}/random-test-sample`);
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+      const data = await response.json();
+      setTweet(data.tweet);
+      setImageUri(data.image_data_uri);
+    } catch (error) {
+      alert(`Failed to fetch test sample: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Inference Execution
   const analyzePost = async () => {
     if (!imageUri) {
@@ -99,23 +118,39 @@ export default function HomeScreen() {
     formData.append('tweet', tweet);
 
     // Format file payload for cross-platform upload
-    if (imageUri.startsWith('data:')) {
-      // SVGs or Base64 datauris: convert to basic mock upload properties
-      const filename = 'sample_preset.svg';
-      formData.append('image', {
-        uri: imageUri,
-        type: 'image/svg+xml',
-        name: filename
-      } as any);
+    if (Platform.OS === 'web') {
+      try {
+        const response = await fetch(imageUri);
+        const blob = await response.blob();
+        const filename = imageUri.startsWith('data:') ? 'sample_preset.svg' : 'upload.jpg';
+        formData.append('image', blob, filename);
+      } catch (err) {
+        console.error("Web blob packaging failed: ", err);
+        // Fallback to RN URI object
+        formData.append('image', {
+          uri: imageUri,
+          type: imageUri.startsWith('data:') ? 'image/svg+xml' : 'image/jpeg',
+          name: 'photo.jpg'
+        } as any);
+      }
     } else {
-      const filename = imageUri.split('/').pop() || 'photo.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image/jpeg`;
-      formData.append('image', {
-        uri: imageUri,
-        type: type,
-        name: filename
-      } as any);
+      if (imageUri.startsWith('data:')) {
+        const filename = 'sample_preset.svg';
+        formData.append('image', {
+          uri: imageUri,
+          type: 'image/svg+xml',
+          name: filename
+        } as any);
+      } else {
+        const filename = imageUri.split('/').pop() || 'photo.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image/jpeg`;
+        formData.append('image', {
+          uri: imageUri,
+          type: type,
+          name: filename
+        } as any);
+      }
     }
 
     try {
@@ -209,7 +244,12 @@ export default function HomeScreen() {
 
             {/* Presets */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Preset Scenarios</Text>
+              <View style={styles.presetsHeaderRow}>
+                <Text style={styles.inputLabel}>Preset Scenarios</Text>
+                <TouchableOpacity style={styles.shuffleLink} onPress={shuffleTestSample}>
+                  <Text style={styles.shuffleLinkText}>🔀 Shuffle Test Sample</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.presetsGrid}>
                 {Object.keys(presets).map((key) => (
                   <TouchableOpacity key={key} style={styles.presetBtn} onPress={() => applyPreset(key)}>
@@ -391,6 +431,19 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 13,
     color: colors.textSecondary
+  },
+  presetsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  shuffleLink: {
+    padding: 4
+  },
+  shuffleLinkText: {
+    fontSize: 12,
+    color: colors.accent,
+    fontWeight: '600'
   },
   presetsGrid: {
     flexDirection: 'row',
