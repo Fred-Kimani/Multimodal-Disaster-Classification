@@ -34,3 +34,8 @@ mobile-dashboard/.env.local
 mobile-dashboard/.env.development.local
 mobile-dashboard/.env.test.local
 mobile-dashboard/.env.production.local
+
+Dominic_Multimodal_Disaster_Classification_260703_170021.pdf
+
+generate_report_figures.py
+/report_figures
